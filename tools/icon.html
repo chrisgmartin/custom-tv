@@ -1,0 +1,22 @@
+<!doctype html>
+<!-- Source for icon.png (512x423): open in Chrome at that window size and take a screenshot. -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 512px; height: 423px; overflow: hidden; background: #03060f; }
+  canvas { position: absolute; left: -238px; top: -170px; width: 1024px; height: 576px; }
+  .mark { position: absolute; left: 50%; top: 42%; width: 150px; height: 150px; transform: translate(-50%, -50%); color: #fff;
+    filter: drop-shadow(0 6px 24px rgba(0, 0, 0, 0.45)); }
+</style>
+</head>
+<body>
+<canvas id="sky" width="1920" height="1080"></canvas>
+<div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+  <path d="M12 2.5v19M2.5 12h19M5.3 5.3l13.4 13.4M18.7 5.3 5.3 18.7"/></svg></div>
+<script src="../js/sky.js"></script>
+<script>
+  TVSky.render(document.getElementById('sky'), { phase: 'night', cloud: 0, kind: 'clear', date: new Date(2026, 0, 1) });
+</script>
+</body>
+</html>
