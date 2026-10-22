@@ -1,6 +1,9 @@
 .DS_Store
 build/
 
+# Personal overrides for the template config, loaded after js/config.js if present.
+js/config.local.js
+
 # Signing material: never commit certificates, passwords or Tizen profiles.
 *.p12
 *.pwd
