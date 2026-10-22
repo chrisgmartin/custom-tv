@@ -1,0 +1,45 @@
+# Samsung TV DNS blocklist — vetted subset.
+# Full context, breakage warnings, and allowlist in network-blocklist.md.
+# 33 hostnames: 11 ACR + 4 ads + 18 vendor telemetry/diagnostics.
+
+# --- ACR (Automatic Content Recognition) ---
+acr-au-prd.samsungcloud.tv
+acr-br-prd.samsungcloud.tv
+acr-ca-prd.samsungcloud.tv
+acr-eu-prd.samsungcloud.tv
+acr-in-prd.samsungcloud.tv
+acr-kr-prd.samsungcloud.tv
+acr-mx-prd.samsungcloud.tv
+acr-nz-prd.samsungcloud.tv
+acr-us-prd.samsungcloud.tv
+acr0.samsungcloudsolution.com
+samsungacr.com
+
+# --- Samsung ads ---
+samsungads.com
+samsungadhub.com
+samsungtvads.com
+samsungads.adsmeasurement.com
+
+# --- Vendor telemetry & diagnostics ---
+nmetrics.samsung.com
+samsungrm.com
+test.samsungrm.net
+devicelog.samsungcloudsolution.net
+prderrordumphsm.samsungcloudsolution.com
+prderrordumpssm.samsungcloudsolution.net
+diagmon-policy.samsungdm.com
+diagmon-serviceapi.samsungdm.com
+report.gras.samsungdm.com
+us-report.gras.samsungdm.com
+osb.samsungqbe.com
+osb-krsvc.samsungqbe.com
+apu.samsungelectronics.com
+bpu.samsungelectronics.com
+cpu.samsungelectronics.com
+dpu.samsungelectronics.com
+kpu.samsungelectronics.com
+upu.samsungelectronics.com
+xpu.samsungelectronics.com
+ypu.samsungelectronics.com
+zpu.samsungelectronics.com
