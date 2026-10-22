@@ -174,6 +174,7 @@
     return 999;
   }
   function brandColor(a) {
+    if (a.color && /^#[0-9a-fA-F]{3,8}$/.test(a.color)) return a.color;
     var words = (a.id + ' ' + a.name).toLowerCase().split(/[^a-z0-9+]+/);
     for (var i = 0; i < words.length; i++) if (BRAND[words[i]]) return BRAND[words[i]];
     return null;
@@ -262,6 +263,14 @@
         settings.hidden = list.filter(function (a) { return homeIds.indexOf(a.id) < 0; }).map(function (a) { return a.id; });
       }
       renderGrid();
+      if (scope === $('apps-page')) {
+        renderAppsPage();
+        if (!focused || !document.contains(focused)) focusEl(firstFocusableIn(scope));
+      }
+      if (scope === $('settings')) {
+        renderSettings();
+        if (!focused || !document.contains(focused)) focusEl(firstFocusableIn(scope));
+      }
       if (scope === $('home')) {
         var again = prevId && document.querySelector('.tile[data-app="' + CSS.escape(prevId) + '"]');
         if (again || !focused || !document.contains(focused)) focusEl(again || firstTile() || document.querySelector('#home .focusable'));
@@ -310,6 +319,98 @@
     ].map(function (f) { return '<div class="fact">' + f[0] + '<span>' + tr(f[1]) + '</span><b>' + f[2] + '</b></div>'; }).join('');
   }
 
+  // ---------- Inputs page ----------
+  // Inputs come from CFG.homeApps entries that carry a `source: { type, number }`.
+  // If none are configured, show a hint telling the user how to add them.
+  function configuredInputs() {
+    return (CFG.homeApps || []).filter(function (a) { return a.source && a.source.type === 'HDMI'; });
+  }
+  function renderInputs() {
+    var ins = configuredInputs();
+    var row = $('inputsRow');
+    row.innerHTML = '';
+    if (!ins.length) {
+      $('inputsSub').textContent = tr('No inputs configured yet.');
+      $('inputsNote').innerHTML = tr('Add entries to {file} with a {field}, for example:', { file: 'js/config.local.js', field: 'source' }) +
+        '<br><code>{ id: "input.hdmi1", name: "Apple TV", source: { type: "HDMI", number: 1 }, color: "#1c1c1e" }</code>';
+      return;
+    }
+    $('inputsSub').textContent = tr('{n} connected · press OK to switch · hold OK to rename', { n: ins.length });
+    $('inputsNote').textContent = '';
+    ins.forEach(function (a, i) {
+      var el = document.createElement('button');
+      el.className = 'in-card focusable' + (i === 0 ? ' featured' : '');
+      el.dataset.app = a.id;
+      if (a.color && /^#[0-9a-fA-F]{3,8}$/.test(a.color) && i !== 0) el.style.background = a.color;
+      var displayName = inputLabel(a);
+      el.innerHTML = '<div class="k">' + esc(a.source.type) + ' ' + esc(a.source.number) + (i === 0 ? ' · ' + tr('Featured') : '') + '</div>' +
+        '<div class="nm">' + esc(displayName) + '</div>' +
+        '<div class="meta">' + esc(a.deviceNote || tr('Hold OK to rename · Press OK to switch')) + '</div>';
+      row.appendChild(el);
+    });
+  }
+  function inputLabel(a) {
+    var map = settings.inputNames;
+    if (map && typeof map === 'object' && !Array.isArray(map) && typeof map[a.id] === 'string' && map[a.id].trim()) {
+      return map[a.id];
+    }
+    return a.name || (a.source.type + ' ' + a.source.number);
+  }
+
+  // ---------- Apps page ----------
+  var CHIPS = [
+    { key: 'all', label: 'All', match: function () { return true; } },
+    { key: 'streaming', label: 'Streaming', match: function (a) {
+      return /(netflix|hbo|max|disney|peacock|hulu|prime|amazon|apple|crunchy|funi|paramount|pluto|tubi)/i.test(a.id + ' ' + a.name);
+    } },
+    { key: 'live', label: 'Live TV', match: function (a) {
+      return /(fox|cnn|espn|news|sling|fubo|youtube.?tv|samsung.?tv|tvplus|live|antenna)/i.test(a.id + ' ' + a.name);
+    } },
+    { key: 'utility', label: 'Utilities', match: function (a) {
+      return /(settings|store|internet|browser|apps|knox|plex|jellyfin|spotify|music)/i.test(a.id + ' ' + a.name);
+    } }
+  ];
+  var activeChip = 'all';
+  function renderAppsPage() {
+    var chipRow = $('appChips');
+    chipRow.innerHTML = CHIPS.map(function (c) {
+      return '<button class="chip focusable' + (c.key === activeChip ? ' on' : '') + '" data-chip="' + c.key + '">' + tr(c.label) + '</button>';
+    }).join('');
+    var grid = $('bigGrid');
+    grid.innerHTML = '';
+    var chip = CHIPS.filter(function (c) { return c.key === activeChip; })[0] || CHIPS[0];
+    var hidden = settings.hidden || [];
+    var list = sortApps(allApps).filter(function (a) {
+      if (a.source) return false; // HDMI inputs live on their own page
+      if (hidden.indexOf(a.id) >= 0 && activeChip === 'all') return true; // still show hidden on Apps page
+      return chip.match(a);
+    });
+    if (!list.length) { grid.innerHTML = '<div class="empty">' + tr('No apps match this filter.') + '</div>'; return; }
+    list.forEach(function (a, i) {
+      var tile = document.createElement('button');
+      tile.className = 'tile focusable' + (a.sample ? ' sample' : '');
+      tile.dataset.app = a.id;
+      tile.dataset.idx = i;
+      var bc = brandColor(a);
+      if (bc) tile.style.background = bc; else tile.classList.add('plain');
+      tile.innerHTML = '<span class="tile-name">' + esc(a.name) + '</span>';
+      function toMonogram() {
+        tile.classList.add('no-icon');
+        var nameEl = tile.querySelector('.tile-name');
+        if (nameEl) nameEl.textContent = monogramInitials(a.name);
+      }
+      if (a.icon) {
+        var img = new Image();
+        img.alt = '';
+        img.onload = function () { if (!a.sample) tintFromIcon(img, tile); };
+        img.onerror = function () { img.remove(); toMonogram(); };
+        img.src = a.icon;
+        tile.insertBefore(img, tile.firstChild);
+      } else toMonogram();
+      grid.appendChild(tile);
+    });
+  }
+
   var PREFS = [
     { key: 'language', label: 'Language', values: [['pt-PT', 'Português (Portugal)'], ['en-GB', 'English']] },
     { key: 'unit', label: 'Temperature', values: [['C', 'Celsius'], ['F', 'Fahrenheit']] },
@@ -353,11 +454,52 @@
     }
   }
 
+  // Scopes are the four top-level pages addressable from the tabs row:
+  // #home, #inputs, #apps-page, #settings. Forecast and Ambient remain as
+  // overlays over whichever scope is current.
+  var SCOPES = ['home', 'inputs', 'apps-page', 'settings'];
+  var scopeFocus = Object.create(null); // last focused element per scope id
+
+  function activeTab() { return document.querySelector('.tab.on'); }
+  function markTab(scopeId) {
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
+      t.classList.toggle('on', t.dataset.scope === scopeId);
+    });
+  }
+
+  var SCOPE_LABELS = { 'home': 'Home', 'inputs': 'Inputs', 'apps-page': 'Apps', 'settings': 'Settings' };
+  function switchScope(id) {
+    if (SCOPES.indexOf(id) < 0) return;
+    if (focused) scopeFocus[scope.id] = focused;
+    SCOPES.forEach(function (s) {
+      var el = $(s);
+      var show = s === id;
+      el.hidden = !show;
+      el.style.display = show ? '' : 'none';
+    });
+    scope = $(id);
+    markTab(id);
+    $('scopeLabel').textContent = tr(SCOPE_LABELS[id] || 'Home');
+    if (id === 'inputs') renderInputs();
+    else if (id === 'apps-page') renderAppsPage();
+    else if (id === 'settings') renderSettings();
+    var want = scopeFocus[id];
+    if (want && document.contains(want) && scope.contains(want)) focusEl(want);
+    else focusEl(firstFocusableIn(scope));
+  }
+  function firstFocusableIn(root) {
+    if (!root) return null;
+    if (root.id === 'home') return firstTile() || root.querySelector('.focusable');
+    if (root.id === 'inputs') return root.querySelector('.in-card.focusable');
+    if (root.id === 'apps-page') return root.querySelector('.tile.focusable');
+    if (root.id === 'settings') return root.querySelector('.row.focusable');
+    return root.querySelector('.focusable');
+  }
+
   function openOverlay(id) {
     homeFocus = focused;
     var el = $(id);
     if (id === 'forecast') renderForecast();
-    if (id === 'settings') renderSettings();
     if (id === 'ambient') { renderAmbient(new Date()); document.body.classList.add('ambient-on'); }
     else document.body.classList.add('overlay-on');
     el.hidden = false;
@@ -365,7 +507,11 @@
     focusEl(el.querySelector('.focusable'));
   }
   function closeOverlay() {
-    if (scope === $('home')) return;
+    // From a scope page, back() falls through to home. Overlays dismiss here.
+    if (!document.body.classList.contains('overlay-on') && !document.body.classList.contains('ambient-on')) {
+      if (scope !== $('home')) switchScope('home');
+      return;
+    }
     scope.hidden = true;
     document.body.classList.remove('ambient-on');
     document.body.classList.remove('overlay-on');
@@ -375,14 +521,17 @@
 
   // ---------- focus & navigation ----------
   function focusables() {
-    return Array.prototype.filter.call(scope.querySelectorAll('.focusable'), function (el) { return el.offsetParent !== null || el === scope; });
+    var isVisible = function (el) { return el.offsetParent !== null; };
+    var scoped = Array.prototype.filter.call(scope.querySelectorAll('.focusable'), isVisible);
+    var top = Array.prototype.filter.call(document.querySelectorAll('.topbar .focusable'), isVisible);
+    return scoped.concat(top);
   }
   function focusEl(el) {
     if (!el) return;
     if (focused) focused.classList.remove('focused');
     focused = el;
     el.classList.add('focused');
-    if (el.classList.contains('tile')) scrollGrid(+el.dataset.idx);
+    if (el.classList.contains('tile') && el.parentNode === $('grid')) scrollGrid(+el.dataset.idx);
     if (el.parentNode && el.parentNode.id === 'appList') {
       var list = el.parentNode, top = el.offsetTop, inset = 8;
       if (top - inset < list.scrollTop) list.scrollTop = Math.max(0, top - inset);
@@ -390,11 +539,42 @@
     }
   }
   function move(dir) {
-    if (!focused || !scope.contains(focused)) { focusEl(focusables()[0]); return; }
-    if (focused.classList.contains('tile') && (dir === 'left' || dir === 'right')) {
+    // Reset only when focus is truly lost. A focused tab lives outside the active
+    // scope but is still a valid focusable — don't throw it away.
+    if (!focused || !document.contains(focused) || !focused.classList.contains('focusable')) {
+      focusEl(focusables()[0]); return;
+    }
+    // Home strip: cycle through the horizontal tile row. The Apps page uses the
+    // wrapping grid below, which handles left/right geometrically.
+    if (focused.classList.contains('tile') && focused.parentNode === $('grid') && (dir === 'left' || dir === 'right')) {
       var tiles = $('grid').querySelectorAll('.tile'), count = tiles.length;
       if (count) focusEl(tiles[(+focused.dataset.idx + (dir === 'right' ? 1 : -1) + count) % count]);
       return;
+    }
+    // Tabs row cycles with left/right. Up stays on the row (no-op); Down goes
+    // back into the current scope.
+    if (focused.classList.contains('tab')) {
+      if (dir === 'left' || dir === 'right') {
+        var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+        var i = tabs.indexOf(focused), n = tabs.length;
+        if (n) focusEl(tabs[(i + (dir === 'right' ? 1 : -1) + n) % n]);
+        return;
+      }
+      if (dir === 'down') { focusEl(firstFocusableIn(scope)); return; }
+      if (dir === 'up') return;
+    }
+    // Pressing Up from any tile jumps straight to the active tab — the top bar
+    // is otherwise two presses away when the weather card sits between them.
+    if (focused.classList.contains('tile') && dir === 'up') {
+      var activeTab = document.querySelector('.tab.on');
+      if (activeTab) { focusEl(activeTab); return; }
+    }
+    // Same shortcut from an input card or settings row — one press up to the tabs.
+    if (dir === 'up' && (focused.classList.contains('in-card') || focused.classList.contains('row') || focused.classList.contains('chip'))) {
+      var at = document.querySelector('.tab.on');
+      if (at && focused.getBoundingClientRect().top > at.getBoundingClientRect().bottom + 20) {
+        focusEl(at); return;
+      }
     }
     var a = focused.getBoundingClientRect(), ax = a.left + a.width / 2, ay = a.top + a.height / 2;
     var best = null, bestScore = Infinity;
@@ -418,6 +598,13 @@
   function activate(el) {
     if (!el) return;
     var d = el.dataset;
+    if (d.scope) { switchScope(d.scope); return; }
+    if (d.chip) {
+      activeChip = d.chip;
+      renderAppsPage();
+      focusEl(document.querySelector('[data-chip="' + d.chip + '"]'));
+      return;
+    }
     if (d.app) {
       var app = allApps.filter(function (a) { return a.id === d.app; })[0];
       window.TVApps.launch(d.app).catch(function (e) { toast(tr('Could not open {app}.', { app: app ? app.name : tr('app') }) + ' ' + tr(e.message)); });
@@ -451,24 +638,59 @@
   }
 
   function back() {
-    if (scope !== $('home')) { closeOverlay(); return; }
+    // Overlays dismiss first, then scope pages fall back to home, then exit the launcher.
+    if (document.body.classList.contains('overlay-on') || document.body.classList.contains('ambient-on')) {
+      closeOverlay();
+      return;
+    }
+    if (scope !== $('home')) { switchScope('home'); return; }
     var first = firstTile();
     if (first && focused !== first) { rowOffset = 0; focusEl(first); return; }
     window.TVApps.exit();
   }
 
-  // Long-press OK on a tile enters reorder mode. Arrows move the tile left or
-  // right, OK or Back exits. Order is persisted in settings.order.
+  // Long-press OK on a tile enters reorder mode (arrows move the tile, order
+  // persisted in settings.order). Long-press OK on an input card enters rename
+  // mode (an inline text field, name persisted in settings.inputNames).
   var EDIT_HOLD_MS = 500;
-  var editTile = null, okTimer = null, okHandled = false;
-  function enterEdit(tile) {
-    if (!tile || !tile.classList.contains('tile')) return;
-    editTile = tile;
-    tile.classList.add('editing');
+  var editTile = null, renameCard = null, renameOriginal = '', okTimer = null, okHandled = false;
+  function enterEdit(el) {
+    if (!el) return;
+    if (el.classList.contains('tile')) { editTile = el; el.classList.add('editing'); return; }
+    if (el.classList.contains('in-card')) { enterRename(el); return; }
   }
   function exitEdit() {
     if (editTile) editTile.classList.remove('editing');
     editTile = null;
+    if (renameCard) exitRename(true); // cancel on generic exit
+  }
+  function enterRename(card) {
+    renameCard = card;
+    card.classList.add('renaming');
+    var nmEl = card.querySelector('.nm');
+    renameOriginal = nmEl ? nmEl.textContent : '';
+    if (!nmEl) return;
+    nmEl.innerHTML = '<input class="rename-input" type="text" value="' + esc(renameOriginal) + '" maxlength="24" autocapitalize="words" />';
+    var input = nmEl.querySelector('input');
+    input.focus();
+    input.setSelectionRange(0, input.value.length);
+  }
+  function exitRename(cancel) {
+    if (!renameCard) return;
+    var card = renameCard, id = card.dataset.app;
+    var input = card.querySelector('.rename-input');
+    if (!cancel && input) {
+      var v = input.value.trim();
+      var map = (settings.inputNames && typeof settings.inputNames === 'object' && !Array.isArray(settings.inputNames)) ? settings.inputNames : {};
+      if (v) map[id] = v; else delete map[id];
+      settings.inputNames = map;
+      saveSettings();
+    }
+    renameCard = null;
+    card.classList.remove('renaming');
+    renderInputs();
+    var again = document.querySelector('.in-card[data-app="' + CSS.escape(id) + '"]');
+    if (again) focusEl(again);
   }
   function moveEdit(dir) {
     if (!editTile) return;
@@ -489,6 +711,14 @@
   document.addEventListener('keydown', function (e) {
     var k = e.keyCode;
     if (scope === $('ambient')) { e.preventDefault(); closeOverlay(); return; }
+    if (renameCard) {
+      // Enter commits, Samsung Back / Esc cancels. Backspace (8) is left alone so
+      // the input can delete a character. Letters, digits and arrows flow to the
+      // text field so the TV's virtual keyboard works normally.
+      if (k === 13) { exitRename(false); e.preventDefault(); return; }
+      if (k === 10009 || k === 27) { exitRename(true); e.preventDefault(); return; }
+      return;
+    }
     if (editTile) {
       if (k === 37) moveEdit(-1);
       else if (k === 39) moveEdit(1);
@@ -497,11 +727,12 @@
       e.preventDefault();
       return;
     }
-    if (k === 13 && focused && focused.classList.contains('tile') && !okTimer) {
+    if (k === 13 && focused && (focused.classList.contains('tile') || focused.classList.contains('in-card')) && !okTimer) {
       okHandled = false;
+      var target = focused;
       okTimer = setTimeout(function () {
         okTimer = null; okHandled = true;
-        enterEdit(focused);
+        enterEdit(target);
       }, EDIT_HOLD_MS);
       e.preventDefault();
       return;
@@ -531,10 +762,12 @@
   });
   // Samsung remote pointer and desktop mouse.
   document.addEventListener('mouseover', function (e) {
+    if (renameCard || editTile) return;
     var el = e.target.closest && e.target.closest('.focusable');
     if (el && scope.contains(el) && el !== focused) focusEl(el);
   });
   document.addEventListener('click', function (e) {
+    if (renameCard) return; // allow the virtual keyboard to interact with the input
     if (scope === $('ambient')) { closeOverlay(); return; }
     var el = e.target.closest && e.target.closest('.focusable');
     if (el && scope.contains(el)) { focusEl(el); activate(el); }
@@ -588,6 +821,7 @@
     loadApps();
     refreshWeather(false);
     if (q && q.get('open')) setTimeout(function () { openOverlay(q.get('open')); }, 300);
+    if (q && q.get('scope')) switchScope(q.get('scope'));
     setInterval(function () { renderClock(new Date()); renderSky(new Date()); }, 5000);
     setInterval(function () { refreshWeather(false); renderWeather(); }, 60e3);
     document.addEventListener('visibilitychange', function () {

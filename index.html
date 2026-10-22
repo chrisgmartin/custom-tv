@@ -18,20 +18,24 @@
     <div class="flash" id="flash"></div>
     <div class="scrim" id="scrim"></div>
 
-    <main id="home" class="scope">
-      <header class="topbar">
-        <div class="brand"><span class="brand-mark" data-icon="spark"></span><span data-i18n="Home">Início</span></div>
-        <nav class="actions">
-          <button class="icon-btn focusable" data-action="home" data-icon="home" data-i18n-label="Home" aria-label="Início"></button>
-          <button class="icon-btn focusable" data-action="forecast" data-icon="forecast" data-i18n-label="Forecast" aria-label="Previsão meteorológica"></button>
-          <button class="icon-btn focusable" data-action="ambient" data-icon="image" data-i18n-label="Ambient mode" aria-label="Modo ambiente"></button>
-          <button class="icon-btn focusable" data-action="settings" data-icon="sliders" data-i18n-label="Settings" aria-label="Definições"></button>
-        </nav>
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" data-icon="spark"></span><span id="scopeLabel" data-i18n="Home">Início</span></div>
+      <nav class="tabs" role="tablist">
+        <button class="tab focusable on" data-scope="home" data-i18n="Home">Início</button>
+        <button class="tab focusable" data-scope="inputs" data-i18n="Inputs">Entradas</button>
+        <button class="tab focusable" data-scope="apps-page" data-i18n="Apps">Aplicações</button>
+        <button class="tab focusable" data-scope="settings" data-i18n="Settings">Definições</button>
+      </nav>
+      <div class="chrome-right">
         <div class="place" id="place"></div>
         <div class="divider"></div>
         <div class="clock" id="clock"></div>
-      </header>
+        <div class="divider"></div>
+        <button class="icon-btn focusable" data-action="ambient" data-icon="image" data-i18n-label="Ambient mode" aria-label="Modo ambiente"></button>
+      </div>
+    </header>
 
+    <main id="home" class="scope">
       <section class="hero">
         <div class="greeting">
           <div class="date" id="date"></div>
@@ -58,6 +62,23 @@
       </section>
     </main>
 
+    <section id="inputs" class="scope page" hidden>
+      <div class="page-head">
+        <h2 data-i18n="Inputs">Entradas</h2>
+        <p class="page-sub" id="inputsSub"></p>
+      </div>
+      <div class="inputs-row" id="inputsRow"></div>
+      <div class="inputs-note" id="inputsNote"></div>
+    </section>
+
+    <section id="apps-page" class="scope page" hidden>
+      <div class="page-head">
+        <h2 data-i18n="Apps">Aplicações</h2>
+        <div class="chips" id="appChips"></div>
+      </div>
+      <div class="big-grid" id="bigGrid"></div>
+    </section>
+
     <section id="forecast" class="overlay scope" hidden>
       <div class="panel forecast-panel">
         <div class="panel-head">
@@ -72,21 +93,16 @@
       </div>
     </section>
 
-    <section id="settings" class="overlay scope" hidden>
-      <div class="panel settings-panel">
-        <div class="panel-head">
-          <div>
-            <div class="eyebrow" data-i18n="Home">Início</div>
-            <h3 data-i18n="Settings">Definições</h3>
-          </div>
-          <button class="pill-btn focusable" data-action="close" data-i18n="Close">Fechar</button>
-        </div>
-        <div class="settings-body">
-          <div class="settings-col" id="prefs"></div>
-          <div class="settings-col">
-            <div class="col-title"><strong data-i18n="Apps on Home">Aplicações no início</strong> <span data-i18n="Press OK to show or hide">Prima OK para mostrar ou ocultar</span></div>
-            <div class="app-list" id="appList"></div>
-          </div>
+    <section id="settings" class="scope page" hidden>
+      <div class="page-head">
+        <h2 data-i18n="Settings">Definições</h2>
+        <p class="page-sub" data-i18n="Changes save as you make them">As alterações guardam-se automaticamente</p>
+      </div>
+      <div class="settings-body">
+        <div class="settings-col" id="prefs"></div>
+        <div class="settings-col">
+          <div class="col-title"><strong data-i18n="Apps on Home">Aplicações no início</strong> <span data-i18n="Press OK to show or hide">Prima OK para mostrar ou ocultar</span></div>
+          <div class="app-list" id="appList"></div>
         </div>
       </div>
     </section>

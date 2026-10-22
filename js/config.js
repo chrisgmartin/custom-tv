@@ -36,5 +36,5 @@ window.TV_HOME_CONFIG = {
   // language: 'en-GB' or 'pt-PT'. hidden: [] shows every installed app on first run;
   // null hides everything not listed in homeApps. order: null uses favoriteOrder;
   // hold OK on a tile to enter edit mode and move it with the arrow keys.
-  defaults: { language: 'en-GB', unit: 'C', clock: '24', scenery: 'auto', effects: true, hidden: [], order: null }
+  defaults: { language: 'en-GB', unit: 'C', clock: '24', scenery: 'auto', effects: true, hidden: [], order: null, inputNames: {} }
 };
