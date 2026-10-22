@@ -166,7 +166,18 @@
     return null;
   }
   function sortApps(list) {
-    return list.slice().sort(function (a, b) { return rank(a) - rank(b) || a.name.localeCompare(b.name); });
+    var order = settings.order && settings.order.length ? settings.order : null;
+    if (!order) return list.slice().sort(function (a, b) { return rank(a) - rank(b) || a.name.localeCompare(b.name); });
+    var idx = Object.create(null);
+    for (var i = 0; i < order.length; i++) idx[order[i]] = i;
+    return list.slice().sort(function (a, b) {
+      var ai = a.id in idx ? idx[a.id] : -1;
+      var bi = b.id in idx ? idx[b.id] : -1;
+      if (ai >= 0 && bi >= 0) return ai - bi;
+      if (ai >= 0) return -1;
+      if (bi >= 0) return 1;
+      return rank(a) - rank(b) || a.name.localeCompare(b.name);
+    });
   }
 
   // If an icon is a full opaque tile, extend its edge colour across the tile.
@@ -418,9 +429,56 @@
     window.TVApps.exit();
   }
 
+  // Long-press OK on a tile enters reorder mode. Arrows move the tile left or
+  // right, OK or Back exits. Order is persisted in settings.order.
+  var EDIT_HOLD_MS = 500;
+  var editTile = null, okTimer = null, okHandled = false;
+  function enterEdit(tile) {
+    if (!tile || !tile.classList.contains('tile')) return;
+    editTile = tile;
+    tile.classList.add('editing');
+  }
+  function exitEdit() {
+    if (editTile) editTile.classList.remove('editing');
+    editTile = null;
+  }
+  function moveEdit(dir) {
+    if (!editTile) return;
+    var id = editTile.dataset.app;
+    var idx = -1;
+    for (var i = 0; i < shownApps.length; i++) if (shownApps[i].id === id) { idx = i; break; }
+    if (idx < 0) return;
+    var j = idx + dir;
+    if (j < 0 || j >= shownApps.length) return;
+    var tmp = shownApps[idx]; shownApps[idx] = shownApps[j]; shownApps[j] = tmp;
+    settings.order = shownApps.map(function (a) { return a.id; });
+    saveSettings();
+    renderGrid();
+    var moved = document.querySelector('.tile[data-app="' + CSS.escape(id) + '"]');
+    if (moved) { focusEl(moved); moved.classList.add('editing'); editTile = moved; }
+  }
+
   document.addEventListener('keydown', function (e) {
     var k = e.keyCode;
     if (scope === $('ambient')) { e.preventDefault(); closeOverlay(); return; }
+    if (editTile) {
+      if (k === 37) moveEdit(-1);
+      else if (k === 39) moveEdit(1);
+      else if (k === 13 || k === 10009 || k === 27 || k === 8) exitEdit();
+      else { return; }
+      e.preventDefault();
+      return;
+    }
+    if (k === 13 && focused && focused.classList.contains('tile') && !okTimer) {
+      okHandled = false;
+      okTimer = setTimeout(function () {
+        okTimer = null; okHandled = true;
+        enterEdit(focused);
+      }, EDIT_HOLD_MS);
+      e.preventDefault();
+      return;
+    }
+    if (k === 13 && okTimer) { e.preventDefault(); return; }
     if (k === 37) move('left');
     else if (k === 38) move('up');
     else if (k === 39) move('right');
@@ -429,6 +487,13 @@
     else if (k === 10009 || k === 27 || k === 8) back();
     else return;
     e.preventDefault();
+  });
+  document.addEventListener('keyup', function (e) {
+    if (e.keyCode !== 13) return;
+    if (okTimer) {
+      clearTimeout(okTimer); okTimer = null;
+      if (!okHandled) activate(focused);
+    }
   });
   // Samsung remote pointer and desktop mouse.
   document.addEventListener('mouseover', function (e) {
