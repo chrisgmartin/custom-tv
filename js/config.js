@@ -1,3 +1,15 @@
+// Silence the console error for the optional js/config.local.js override.
+// Attached here so no inline onerror attribute is needed (a future CSP without
+// `unsafe-inline` for script-src-attr would otherwise break the attribute silently).
+if (typeof window.addEventListener === 'function') {
+  window.addEventListener('error', function (e) {
+    var el = e.target;
+    if (el && el.tagName === 'SCRIPT' && /\/config\.local\.js(?:\?|$)/.test(el.src)) {
+      e.preventDefault();
+    }
+  }, true);
+}
+
 // Edit these and reinstall (tools/install.sh) to change location or defaults.
 window.TV_HOME_CONFIG = {
   // Weather location. Find coordinates at https://open-meteo.com/en/docs (search a city).
