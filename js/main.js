@@ -21,9 +21,16 @@
   // ---------- settings ----------
   function loadSettings() {
     var s = {};
-    try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch (e) { /* use defaults */ }
-    var out = {};
-    Object.keys(CFG.defaults).forEach(function (k) { out[k] = k in s ? s[k] : CFG.defaults[k]; });
+    try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); } catch (e) { /* use defaults */ }
+    if (!s || typeof s !== 'object') s = {};
+    var d = CFG.defaults, out = {};
+    Object.keys(d).forEach(function (k) {
+      var v = s[k], dv = d[k];
+      var ok = dv === null ? (v === null || Array.isArray(v))
+             : Array.isArray(dv) ? Array.isArray(v)
+             : typeof v === typeof dv;
+      out[k] = ok ? v : dv;
+    });
     return out;
   }
   function saveSettings() {

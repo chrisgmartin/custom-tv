@@ -80,7 +80,7 @@ test('installed pinned apps survive show=false; self and hidden system apps are 
   ]);
   assert.equal(tiles[0].name, 'Netflix');
   assert.equal(tiles[0].icon, 'css/app-icons/netflix.png');
-  assert.equal(tiles[1].icon, 'file:///other.png');
+  assert.equal(tiles[1].icon, 'app-icons/other.visible.png');
 });
 
 test('regular apps launch by exact installed ID', async () => {
