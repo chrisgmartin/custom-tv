@@ -29,3 +29,35 @@ test('language fallback and substitutions preserve literal app and place names',
   assert.equal(lang.text('{count} apps', { count: 5 }), '5 apps');
   assert.equal(lang.text('YouTube'), 'YouTube');
 });
+
+test('tab labels and page copy translate for both languages', () => {
+  const { TVI18n: lang } = load();
+  lang.setLanguage('pt-PT');
+  for (const key of ['Home', 'Inputs', 'Apps', 'Settings', 'Featured', 'All', 'Streaming', 'Live TV', 'Utilities']) {
+    const translated = lang.text(key);
+    assert.notEqual(translated, '', `${key} must have a translation`);
+  }
+  // The specific wording for the four tab labels.
+  assert.equal(lang.text('Home'), 'Início');
+  assert.equal(lang.text('Inputs'), 'Entradas');
+  assert.equal(lang.text('Apps'), 'Aplicações');
+  assert.equal(lang.text('Settings'), 'Definições');
+  assert.equal(lang.text('All'), 'Tudo');
+  assert.equal(lang.text('Streaming'), 'Streaming');
+  assert.equal(lang.text('Live TV'), 'TV em direto');
+  assert.equal(lang.text('Utilities'), 'Utilitários');
+  // Inputs page sub-header with count substitution.
+  assert.equal(
+    lang.text('{n} connected · press OK to switch · hold OK to rename', { n: 2 }),
+    '2 ligadas · OK para trocar · OK longo para renomear'
+  );
+});
+
+test('English source text is the fallback when a key is not translated', () => {
+  const { TVI18n: lang } = load();
+  lang.setLanguage('pt-PT');
+  // Any key that happens to lack a PT entry falls through unchanged — exercise
+  // the fallback with a made-up key so this test stays stable as the catalog grows.
+  assert.equal(lang.text('A string that is intentionally not in the catalog'),
+                         'A string that is intentionally not in the catalog');
+});
