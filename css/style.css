@@ -54,7 +54,7 @@ canvas {
 
 #landscape, .landscape-layer, .landscape-haze {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   pointer-events: none;
 }
 .landscape-layer {
@@ -71,7 +71,7 @@ canvas {
 
 .scrim {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   background:
     linear-gradient(90deg, rgba(3, 6, 13, 0.5) 0%, rgba(3, 6, 13, 0.18) 40%, rgba(3, 6, 13, 0) 65%),
     linear-gradient(180deg, rgba(3, 6, 13, 0.4) 0%, rgba(3, 6, 13, 0) 22%, rgba(3, 6, 13, 0) 42%, rgba(3, 6, 13, 0.6) 100%);
@@ -85,7 +85,7 @@ body[data-phase='day'] .scrim {
 
 .flash {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   background: rgba(225, 232, 255, 0.55);
   opacity: 0;
   pointer-events: none;
@@ -97,7 +97,7 @@ body[data-phase='day'] .scrim {
 
 #home {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   transition: opacity 0.5s ease;
   text-shadow: 0 2px 22px rgba(0, 0, 0, 0.35);
 }
@@ -285,12 +285,23 @@ h1 {
   color: #fff;
   mix-blend-mode: difference;
 }
+.tile.editing {
+  box-shadow: 0 0 0 2px rgba(3, 6, 13, 0.4), 0 0 0 5px var(--accent),
+    0 0 32px rgba(255, 212, 92, 0.6);
+  animation: edit-pulse 0.9s ease-in-out infinite alternate;
+  z-index: 2;
+}
+.tile.editing .tile-name { opacity: 1; }
+@keyframes edit-pulse {
+  from { transform: translateY(-2px) scale(1.02); }
+  to { transform: translateY(-5px) scale(1.045); }
+}
 .empty { grid-column: 1 / -1; font-size: 24px; color: var(--fg2); padding: 40px 0; }
 
 /* ---------- overlays ---------- */
 .overlay {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -392,7 +403,7 @@ body.overlay-on #home { visibility: hidden; }
 /* ---------- ambient ---------- */
 body.ambient-on #home { visibility: hidden; }
 body.ambient-on .scrim { opacity: 0.55; }
-.ambient { position: absolute; inset: 0; text-shadow: 0 4px 40px rgba(0, 0, 0, 0.45); animation: fade-in 0.6s ease; }
+.ambient { position: absolute; top: 0; right: 0; bottom: 0; left: 0; text-shadow: 0 4px 40px rgba(0, 0, 0, 0.45); animation: fade-in 0.6s ease; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 .amb-time {
   position: absolute;
@@ -409,7 +420,7 @@ body.ambient-on .scrim { opacity: 0.55; }
 .amb-wx svg { width: 64px; height: 64px; }
 .amb-wx span { font-weight: 500; }
 .amb-wx em { font-style: normal; color: var(--fg2); }
-.amb-exit { position: absolute; inset: 0; opacity: 0; }
+.amb-exit { position: absolute; top: 0; right: 0; bottom: 0; left: 0; opacity: 0; }
 
 /* ---------- toast ---------- */
 .toast {
