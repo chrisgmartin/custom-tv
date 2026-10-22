@@ -4,6 +4,10 @@ build/
 # Personal overrides for the template config, loaded after js/config.js if present.
 js/config.local.js
 
+# Signing material and SDK installers kept beside the repo (never redistribute).
+tizencertificates/
+web-cli_Tizen_SDK_*.bin
+
 # Signing material: never commit certificates, passwords or Tizen profiles.
 *.p12
 *.pwd
