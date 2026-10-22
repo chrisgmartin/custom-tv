@@ -28,6 +28,11 @@ __pycache__/
 # Backups and captures from your own TV.
 backup-*/
 screenshots/
+# README images live under docs/screenshots and should be committed.
+!docs/screenshots/
+!docs/screenshots/**
 *.tgz
 *.db
 *.db-journal
+/.local/
+/experiments/
