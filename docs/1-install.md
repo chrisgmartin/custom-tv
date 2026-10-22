@@ -77,6 +77,41 @@ tools/install.sh 192.168.1.50
 
 The script copies the app into `build/`, then signs it with your `tv-home` profile, installs it on the TV and launches it. Run the same command after every change.
 
+### If `tizen package` crashes with a NullPointerException
+
+Modern Tizen Studio refuses to sign with a `.p12` that has an empty password
+and an empty `.pwd` file — it tries to prompt for a password, fails to find
+a terminal, and exits with
+`java.lang.NullPointerException` inside `ConsolePrompter.password`.
+
+The fix is to re-wrap the author and distributor keys with a non-empty
+password and re-register the profile. From the repo root (adjust paths if
+your certs are elsewhere):
+
+```bash
+cd tizencertificates/certificates
+
+# Keep the originals, in case something goes wrong.
+cp author.p12 author.p12.empty-pw.bak
+cp distributor.p12 distributor.p12.empty-pw.bak
+
+# Rebuild each p12 with a password. Any non-empty string works — this just
+# satisfies the signer; the password lives only on your machine.
+openssl pkcs12 -legacy -export -out author.p12 \
+  -inkey author.key.pem -in author-and-ca.crt -password pass:frame
+openssl pkcs12 -legacy -export -out distributor.p12 \
+  -inkey distributor.key.pem -in distributor-and-ca.crt -password pass:frame
+
+# Re-register the profile with the new password.
+~/tizen-studio/tools/ide/bin/tizen security-profiles add \
+  -n tv-home \
+  -a "$(pwd)/author.p12"      -p  frame \
+  -d "$(pwd)/distributor.p12" -dp frame \
+  -A -f
+```
+
+After this, `tools/install.sh` signs cleanly from a non-interactive shell.
+
 ## Uninstall
 
 If you did level 2, first [restore Samsung's Home](2-set-as-home.md#switch-back-to-samsungs-home). Then run:
