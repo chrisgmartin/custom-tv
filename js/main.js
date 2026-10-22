@@ -55,6 +55,12 @@
   var dateFmt = new Intl.DateTimeFormat(settings.language, { weekday: 'long', day: 'numeric', month: 'long' });
   var dayFmt = new Intl.DateTimeFormat(settings.language, { weekday: 'short' });
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function monogramInitials(name) {
+    var parts = String(name || '').trim().split(/\s+/).filter(function (p) { return p.length; });
+    if (!parts.length) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
 
   // ---------- time of day ----------
   function today(now) { return weather && weather.daily.filter(function (d) { return sameDay(d.date, now); })[0]; }
@@ -216,14 +222,19 @@
       var bc = brandColor(a);
       if (bc) tile.style.background = bc; else tile.classList.add('plain');
       tile.innerHTML = '<span class="tile-name">' + esc(a.name) + '</span>';
+      function toMonogram() {
+        tile.classList.add('no-icon');
+        var nameEl = tile.querySelector('.tile-name');
+        if (nameEl) nameEl.textContent = monogramInitials(a.name);
+      }
       if (a.icon) {
         var img = new Image();
         img.alt = '';
         img.onload = function () { if (!a.sample) tintFromIcon(img, tile); };
-        img.onerror = function () { img.remove(); tile.classList.add('no-icon'); };
+        img.onerror = function () { img.remove(); toMonogram(); };
         img.src = a.icon;
         tile.insertBefore(img, tile.firstChild);
-      } else tile.classList.add('no-icon');
+      } else toMonogram();
       grid.appendChild(tile);
     });
     if (!shownApps.length) grid.innerHTML = '<div class="empty">' + tr('No apps to show. Open Settings to choose apps.') + '</div>';
@@ -309,6 +320,16 @@
   function prefValue(p) {
     var v = p.values.filter(function (x) { return x[0] === settings[p.key]; })[0];
     return tr(v ? v[1] : p.values[0][1]);
+  }
+  function cyclePref(key) {
+    var p = PREFS.filter(function (x) { return x.key === key; })[0];
+    if (!p) return;
+    var i = p.values.map(function (v) { return v[0]; }).indexOf(settings[key]);
+    settings[key] = p.values[(i + 1) % p.values.length][0];
+    saveSettings();
+    if (key === 'language') { applyLanguage(); renderSettings(); }
+    else renderAll();
+    toast(tr(p.label) + ': ' + prefValue(p));
   }
   function renderSettings() {
     $('prefs').innerHTML = '<div class="col-title">' + tr('Preferences') + '<span>' + tr('Press OK to change') + '</span></div>' +
@@ -486,6 +507,12 @@
       return;
     }
     if (k === 13 && okTimer) { e.preventDefault(); return; }
+    if (k >= 403 && k <= 406 && scope === $('home')) {
+      // Red/Green/Yellow/Blue: cycle effects / unit / scenery / clock.
+      cyclePref({ 403: 'effects', 404: 'unit', 405: 'scenery', 406: 'clock' }[k]);
+      e.preventDefault();
+      return;
+    }
     if (k === 37) move('left');
     else if (k === 38) move('up');
     else if (k === 39) move('right');
@@ -543,6 +570,12 @@
   }
 
   function init() {
+    // Register the four colour buttons so the TV routes them to this app.
+    if (window.tizen && tizen.tvinputdevice && tizen.tvinputdevice.registerKey) {
+      ['ColorF0Red', 'ColorF1Green', 'ColorF2Yellow', 'ColorF3Blue'].forEach(function (name) {
+        try { tizen.tvinputdevice.registerKey(name); } catch (e) { /* already registered */ }
+      });
+    }
     applyLanguage();
     Array.prototype.forEach.call(document.querySelectorAll('[data-icon]'), function (el) { el.innerHTML = I.ui[el.dataset.icon]; });
     $('place').textContent = CFG.location.name;
