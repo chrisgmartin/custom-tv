@@ -14,9 +14,50 @@
     try { return tizen.application.getCurrentApplication().appInfo.id; } catch (e) { return ''; }
   }
 
-  function iconUrl(p) {
-    if (!p) return '';
-    return p.charAt(0) === '/' ? 'file://' + p : p;
+  // Icons are copied into the webapp's own origin (see tools/sync-app-icons.sh);
+  // loading via a webapp-relative URL avoids cross-origin blocks on file://.
+  function iconUrl(id) {
+    if (!id) return '';
+    return 'app-icons/' + id + '.png';
+  }
+
+  // Treat lowercase hyphenated service IDs as system apps. Real user apps have
+  // a brand name and a vendor-signed id prefix; these do not.
+  var SYSTEM_ID_PATTERNS = [
+    /^com\.samsung\.tv\.coba\./,
+    /^com\.samsung\.tv\.cobalt-app-\d+/,
+    /^com\.samsung\.tv\.(aria|aov|aispeaker|ambient|appinfoviewer|arkwheel|autosetup|bbplayer|bixby|camera-launcher|hotel|mde-|SAFCommonPlugin|SelfDiagnosis|TVDeviceCare|AccountNudge|CSAccount|CSBilling|adplayer|aitech|autofill|aria-|ep-|hitcomp|mtm-|remoteapp|hotel|hitcomp|SACM|safcrash)/,
+    /^com\.samsung\.ep\./,
+    /^com\.samsung\.tizen\.autofill/,
+    /^org\.tizen\.(channel-list|UsbSyncDisplay|browser|xmrender)/,
+    /^capi-/,
+    /^content-grab-service$/,
+    /^SmartControlService$/
+  ];
+  function isSystemApp(a) {
+    var id = a && a.id || '';
+    for (var i = 0; i < SYSTEM_ID_PATTERNS.length; i++) if (SYSTEM_ID_PATTERNS[i].test(id)) return true;
+    var name = (a && a.name || '').toLowerCase();
+    if (/^(service|dtv-|dummy|plugin|framework|viewer|engine|crashservice|-service$|_service$)/.test(name)) return true;
+    if (name.indexOf('framework') >= 0 || name.indexOf('-service') >= 0 || name.indexOf('_service') >= 0) return true;
+    return false;
+  }
+
+  function normName(n) {
+    return (n || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  }
+
+  // Prefer the entry that looks more like a user-facing app:
+  //   1. has a readable iconPath,
+  //   2. has a mixed-case vendor-signed id (not a cobalt-* or samsung internal one).
+  function preferAppInfo(candidate, current) {
+    var cIcon = !!(candidate && candidate.iconPath);
+    var pIcon = !!(current && current.iconPath);
+    if (cIcon !== pIcon) return cIcon;
+    var cBad = /^com\.samsung\.tv\.cobalt-/.test(candidate.id);
+    var pBad = /^com\.samsung\.tv\.cobalt-/.test(current.id);
+    if (cBad !== pBad) return !cBad;
+    return false;
   }
 
   function sampleIcon(name, fg, bg) {
@@ -47,12 +88,38 @@
     return new Promise(function (resolve, reject) {
       tizen.application.getAppsInfo(function (infos) {
         var me = selfId();
-        var apps = infos.filter(function (a) {
-          return a.id !== me && (a.show || homeApps.some(function (h) { return h.id === a.id; }));
-        }).map(function (a) {
-          var home = homeApps.filter(function (h) { return h.id === a.id; })[0];
-          return { id: a.id, name: home ? home.name : a.name, icon: home ? home.icon : iconUrl(a.iconPath) };
-        });
+        var pinned = Object.create(null);
+        homeApps.forEach(function (h) { pinned[h.id] = h; });
+        var byId = Object.create(null);
+        infos.forEach(function (a) { byId[a.id] = a; });
+        var apps;
+        if (window.TV_HOME_CONFIG.onlyHomeApps) {
+          // Strict curation: show only the configured home apps, in order.
+          apps = homeApps.filter(function (h) { return !h.source; }).map(function (h) {
+            var a = byId[h.id];
+            return { id: h.id, name: h.name || (a && a.name) || h.id, icon: h.icon || iconUrl(h.id), missing: !a };
+          });
+        } else {
+          var filtered = infos.filter(function (a) {
+            if (a.id === me) return false;
+            if (pinned[a.id]) return true;
+            if (!a.show) return false;
+            if (isSystemApp(a)) return false;
+            return true;
+          });
+          var byKey = {};
+          filtered.forEach(function (a) {
+            var key = normName(a.name);
+            if (!key) return;
+            var prev = byKey[key];
+            if (!prev || preferAppInfo(a, prev)) byKey[key] = a;
+          });
+          apps = Object.keys(byKey).map(function (k) {
+            var a = byKey[k];
+            var home = pinned[a.id];
+            return { id: a.id, name: home ? home.name : a.name, icon: home ? home.icon : iconUrl(a.id) };
+          });
+        }
         resolve(apps.concat(homeApps.filter(function (a) { return a.source; })));
       }, function (err) { reject(new Error(err && err.message || 'Could not read installed apps')); });
     });

@@ -4,6 +4,9 @@ window.TV_HOME_CONFIG = {
   location: { name: 'Porto', latitude: 41.1496, longitude: -8.611 },
   locale: 'en-GB',
   weatherRefreshMinutes: 15,
+  // When true, show only the IDs listed in homeApps, in this exact order.
+  // When false, show every installed app and bring homeApps to the front.
+  onlyHomeApps: false,
   // Tiles pinned first, in this order. List installed app IDs with:
   //   ~/tizen-studio/tools/sdb -s <tv-ip>:26101 shell 0 vd_applist   (use the app_tizen_id lines)
   // `name` and `icon` are optional and override what the TV reports.
@@ -19,6 +22,7 @@ window.TV_HOME_CONFIG = {
     'hulu', 'peacock', 'spotify', 'twitch', 'plex', 'jellyfin', 'browser'
   ],
   // language: 'en-GB' or 'pt-PT'. hidden: [] shows every installed app on first run;
-  // null hides everything not listed in homeApps. Viewers can change all of these in Settings.
-  defaults: { language: 'en-GB', unit: 'C', clock: '24', scenery: 'auto', effects: true, hidden: [] }
+  // null hides everything not listed in homeApps. order: null uses favoriteOrder;
+  // hold OK on a tile to enter edit mode and move it with the arrow keys.
+  defaults: { language: 'en-GB', unit: 'C', clock: '24', scenery: 'auto', effects: true, hidden: [], order: null }
 };
